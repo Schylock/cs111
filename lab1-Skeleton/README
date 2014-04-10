@@ -1,4 +1,39 @@
-This is a skeleton for CS 111 Lab 1.
+Group, Discussion, and ID Numbers
+ - Mingyu Lu	1B 904 035 039
+ - Arjun Patel	
 
-Replace this README file with notes on your implementation.
-Mentions any special features or limitations.
+
+////////////////////////////////////////////////////////////////////////////////
+// Lab 1, Part A
+////////////////////////////////////////////////////////////////////////////////
+
+read_command_stream:
+
+This function operates by reading the input one character at a time until a 
+complete token is made, at which time it insert said token into the end of a
+command_stream linked list with fields char buffer(to hold a word if any) and
+command type. This function relies on state transitions. Every time a char of a
+certain type is read (i.e. |, &, ;, or (), appropriate action is taken based on
+the type of the current char and the current state, which is determined by the 
+type of the previous char read. The first node in the linked list is made to be 
+a 'dummy' node so as to facilitate the use of that linked list as a stream later
+on.  
+
+
+make_command_stream:
+
+This function operates by reading the input command_stream until a complete 
+command is constructed or the stream has reached its end. This function draws 
+heavily from the method presented in discussion and implements it almost to the 
+letter. Two stacks, one for unused operators and the other for 'completed' 
+commands are used to store their respective commands as the command_stream is 
+read. While reading, if the current operator has lower equal precedence than the 
+top command of the operator stack, the operator stack is popped and combined 
+with commands from the other stack until the condition no longer is true. After 
+reading in from the stream a full command, elements remaining in the stack are 
+combined appropriately until there is only one left which is then returned.
+
+known issues:
+
+Our implementation only covers mostly standard cases that may occur. Any corner
+case inputs may cause undefined behaviour in the program.
