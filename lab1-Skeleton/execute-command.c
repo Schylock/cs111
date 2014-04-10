@@ -2,21 +2,25 @@
 
 #include "command.h"
 #include "command-internals.h"
-
+#include <stdlib.h>
 #include <error.h>
 
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
-int
-command_status (command_t c)
+int command_status (command_t c)
 {
   return c->status;
 }
 
-void
-execute_command (command_t c, int time_travel)
+void execute_command (command_t c, int time_travel)
 {
+	c=NULL;
+	time_travel=0;
+	if(time_travel)
+		time_travel=time_travel;
+	if(c)
+		c=c;
   /* FIXME: Replace this with your implementation.  You may need to
      add auxiliary functions and otherwise modify the source code.
      You can also use external functions defined in the GNU C Library.  */
