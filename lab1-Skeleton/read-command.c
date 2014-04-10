@@ -273,11 +273,13 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		 
 		 }
 	  
-	   case '\n':
+	  case '\n':
 	   lineNumber++;
 		//fall thru
 	  case '\t':
 		//fall thru  */
+		
+	  case 13:
 	  case ' ':
 	    if (state == PIPE)
 		{
@@ -300,6 +302,12 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		  }
 		}
 		else if (state == SPACE){
+		  if (c == '\n')
+		  {
+		    char * tmp = checked_malloc(sizeof(char));
+			tmp[0] = '\n';
+			stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND);
+		  }	
 		  continue;
 		}
 		break;
@@ -325,9 +333,10 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		}
 		else 
 		{
-		  if ( c < 65 || c > 122 || (c > 90 && c < 97))
+		  if ( !((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == '!' || c == '%' || c == '+'
+				|| c == '-' || c == '.' || c == '/' || c == ':' || c == '@' || c == '^' || c== '_'))
 		  {
-			 fprintf(stderr, "%d: Command beginning with non letter\n", lineNumber);
+			 fprintf(stderr, "%d: Command beginning with containing letter\n", lineNumber);
 		    //error (1, 0, "Command beginning with non letter");
 		  }
 		  buffer = append(buffer, &buffer_size, c);
@@ -409,6 +418,8 @@ command_t read_command_stream (command_stream_t stream)
   command_stream_t s = stream-> next, prev_s;
   command_t command  = NULL;
   char ** buffer;
+  if (s == NULL)
+	return NULL;
   while (s != NULL)
   {
    switch(s ->type)
@@ -481,6 +492,8 @@ command_t read_command_stream (command_stream_t stream)
 	  command = checked_malloc(sizeof(struct command));
 	  command -> type = SIMPLE_COMMAND;
 	  push(expr_stack, command); 
+	  while( s && s-> word[0] == '\n')
+		s = s-> next;
 	  while( s && s-> type == SIMPLE_COMMAND)
 	  {
 	    if ( (s-> word[0] == '<' || s-> word[0] == '>') && s-> next == NULL)
@@ -509,10 +522,15 @@ command_t read_command_stream (command_stream_t stream)
 	      s = s-> next -> next;
 		  continue;
 		}
-		if (s-> word[0] == '\n')
+		while (s && s-> word[0] == '\n')
 		{
 		  s = s-> next;
-		  goto end;
+		  prev_is_simple = -1;
+		}
+		if (prev_is_simple == -1){
+			buffer = append2(buffer, &buffer_size, null);
+			command->u.word = buffer;
+			goto end;
 		}
 	    buffer = append2(buffer, &buffer_size, s->word);
 		
@@ -528,7 +546,7 @@ command_t read_command_stream (command_stream_t stream)
 	s = s-> next;
   }
   end:
-  if (buffer_size != 0)
+  if (buffer_size > 0 )
   {
 	buffer = append2(buffer, &buffer_size, null);
 	command->u.word = buffer;
