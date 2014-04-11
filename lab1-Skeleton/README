@@ -36,4 +36,6 @@ combined appropriately until there is only one left which is then returned.
 known issues:
 
 Our implementation only covers mostly standard cases that may occur. Any corner
-case inputs may cause undefined behaviour in the program.
+case inputs may cause undefined behaviour in the program. As for printing error
+messages, the function fprintf causes some very strange errors with our program
+whilst the function error works just fine.
