@@ -29,6 +29,7 @@ struct command_stream
 	char* word;
 	int word_size;
 	enum command_type type;
+	int lineNumber;
 };
 
 struct stack_struct
@@ -43,8 +44,7 @@ typedef struct stack_struct * stack_t;
 char * append(char* arr, int* size, char arg)
 {
   char * res;
-  if (*size == 0)
-  {
+  if (*size == 0){
 	res = (char*)checked_malloc((*size));
 	res[0] = arg;
 	(*size)++;
@@ -59,12 +59,10 @@ char * append(char* arr, int* size, char arg)
 char** append2(char** arr, int* size, char* arg)
 {
   char ** res;
-  if (*size == 0)
-  {
+  if (*size == 0){
     res = (char**)checked_malloc( sizeof(char*) );
   }
-  else
-  {
+  else{
     res = (char**)checked_realloc(arr, ((*size)+ 1) * sizeof(char*));
   }
   res[(*size)] = arg;
@@ -75,12 +73,10 @@ char** append2(char** arr, int* size, char* arg)
 void print_stream(command_stream_t stream)
 {
   stream = stream -> next;
-  while( stream != NULL)
-  {
+  while( stream != NULL){
     //printf("Token: %s, Size: %d, Type: %d\n", stream-> word, stream-> word_size, 
 		//stream -> type);
-    if (stream-> next == NULL || stream->next->word_size == 0)
-	{
+    if (stream-> next == NULL || stream->next->word_size == 0){
 	  stream-> next = NULL;
 	}
 	stream = stream-> next;
@@ -88,7 +84,7 @@ void print_stream(command_stream_t stream)
 
 }
  
-command_stream_t add_and_advance(command_stream_t stream, char* buffer, int size, enum command_type type)
+command_stream_t add_and_advance(command_stream_t stream, char* buffer, int size, enum command_type type, int lineNumber)
 {
   buffer = append(buffer, &size, '\0');
   size--;
@@ -96,8 +92,9 @@ command_stream_t add_and_advance(command_stream_t stream, char* buffer, int size
   stream-> word_size = size;
   stream-> type = type;
   stream-> next = checked_malloc(sizeof(struct command_stream));
+  stream-> lineNumber = lineNumber;
   return stream->next;
-}
+ }
  
    
 command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_next_byte_argument)
@@ -115,22 +112,19 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
   command_stream_t stream_head = checked_malloc(sizeof(struct command_stream));
   stream_head -> next = checked_malloc(sizeof(struct command_stream));
   command_stream_t stream = stream_head-> next;
-  while ( (c = get_next_byte(get_next_byte_argument)) != EOF)
-  {
+  while ( (c = get_next_byte(get_next_byte_argument)) != EOF){
     //printf("%d\n", state);
-	if (paren_count < 0)
-	{
-	  fprintf(stderr, "%d: Too many closing parens\n", lineNumber);
+	if (paren_count < 0){
+	  error (1, 0, "%d: Too many closing parens\n", lineNumber);
 	}
-    switch(c)
-	{
+    switch(c){
 	  case ';':
 	    if (state == CHAR)
 		{
-		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND);
+		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND, lineNumber);
 		  char *tmp = checked_malloc(sizeof(char));
 		  tmp[0] = 'c';
-		  stream = add_and_advance(stream, tmp, 1, SEQUENCE_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, SEQUENCE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		}
@@ -138,7 +132,7 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		{
 		  char *tmp = checked_malloc(sizeof(char));
 		  tmp[0] = ';';
-		  stream = add_and_advance(stream, tmp, 1, SEQUENCE_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, SEQUENCE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		}
@@ -146,10 +140,10 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 	  case '>' :
 	    if (state == CHAR)
 		{
-		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND);
+		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND, lineNumber);
 		  char *tmp = checked_malloc(sizeof(char));
 		  tmp[0] = '>';
-		  stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		}
@@ -157,7 +151,7 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		{
 		  char *tmp = checked_malloc(sizeof(char));
 		  tmp[0] = '>';
-		  stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		}
@@ -165,10 +159,10 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 	  case '<' :
 	    if (state == CHAR)
 		{
-		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND);
+		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND, lineNumber);
 		  char *tmp = checked_malloc(sizeof(char));
 		  tmp[0] = '<';
-		  stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		}
@@ -176,7 +170,7 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		{
 		  char *tmp = checked_malloc(sizeof(char));
 		  tmp[0] = '<';
-		  stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		}
@@ -194,13 +188,13 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		  char *tmp = checked_malloc(sizeof(char)*2);
 		  tmp[0] = '|';
 		  tmp[1] = '|';
-		  stream = add_and_advance(stream, tmp, 2, OR_COMMAND);
+		  stream = add_and_advance(stream, tmp, 2, OR_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		}
 		else if (state == CHAR)
 		{
-		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND);
+		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		  state = PIPE;
@@ -211,24 +205,21 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		}
 		break;
 	  case '&':
-		if (state == AND)
-		{
+		if (state == AND){
 		  char *tmp = checked_malloc(sizeof(char)*2);
 		  tmp[0] = '&';
 		  tmp[1] = '&';
-		  stream = add_and_advance(stream, tmp, 2, AND_COMMAND);
+		  stream = add_and_advance(stream, tmp, 2, AND_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		} 
-		else if (state == CHAR)
-		{
-		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND);
+		else if (state == CHAR){
+		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		  state = AND;
 		}
-		else if (state == SPACE)
-		{
+		else if (state == SPACE){
 		  state = AND;
 		}
 		break;
@@ -237,10 +228,10 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		{
 		  char *tmp = checked_malloc(sizeof(char));
 		  tmp[0] = '|';
-		  stream = add_and_advance(stream, tmp, 1, PIPE_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, PIPE_COMMAND, lineNumber);
 		  tmp = checked_malloc(sizeof(char));
 		  tmp[0] = '(';
-		  stream = add_and_advance(stream, tmp, 1, SUBSHELL_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, SUBSHELL_COMMAND, lineNumber);
 		  paren_count++;
 		  state = SPACE;
 		}
@@ -248,7 +239,7 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		{
 		  char *tmp = checked_malloc(sizeof(char));
 		  tmp[0] = '(';
-		  stream = add_and_advance(stream, tmp, 1, SUBSHELL_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, SUBSHELL_COMMAND, lineNumber);
 		  paren_count++;
 		  state = SPACE;
 		}
@@ -256,71 +247,60 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 	   case ')':
 	     if (state == CHAR)
 		 {
-		   stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND);
+		   stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND, lineNumber);
 		   state = SPACE;
 		   buffer_size = 0;
 		   char *tmp = checked_malloc(sizeof(char));
 		   tmp[0] = ')';
-		   stream = add_and_advance(stream, tmp, 1, SUBSHELL_COMMAND);
+		   stream = add_and_advance(stream, tmp, 1, SUBSHELL_COMMAND, lineNumber);
 		   paren_count--;
 		 }
 		 else if(state == SPACE)
 		 {
 		   char *tmp = checked_malloc(sizeof(char));
 		   tmp[0] = ')';
-		   stream = add_and_advance(stream, tmp, 1, SUBSHELL_COMMAND);
+		   stream = add_and_advance(stream, tmp, 1, SUBSHELL_COMMAND, lineNumber);
 		   paren_count--;
 		 
 		 }
-	  
+		 break;
 	  case '\n':
-	   lineNumber++;
+	    lineNumber++; 
 		//fall thru
 	  case '\t':
 		//fall thru  */
-		
-	  case 13:
 	  case ' ':
 	    if (state == PIPE)
 		{
 		  char *tmp = checked_malloc(sizeof(char));
 		  tmp[0] = '|';
-		  stream = add_and_advance(stream, tmp, 1, PIPE_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, PIPE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		}
 		else if (state == CHAR)
 		{
-		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND);
+		  stream = add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
-		  if (c == '\n')
-		  {
+		  if (c == '\n'){
 		    char * tmp = checked_malloc(sizeof(char));
 			tmp[0] = '\n';
-			stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND);
+			stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND, lineNumber);
 		  }
 		}
 		else if (state == SPACE){
-		  if (c == '\n')
-		  {
-		    char * tmp = checked_malloc(sizeof(char));
-			tmp[0] = '\n';
-			stream = add_and_advance(stream, tmp, 1, SIMPLE_COMMAND);
-		  }	
 		  continue;
 		}
 		break;
 	  default:
-		if (state == CHAR)
-		{
+		if (state == CHAR){
 		  buffer = append(buffer, &buffer_size, c);
 		}
-		else if(state == PIPE)
-		{
+		else if(state == PIPE){
 		  char *tmp = checked_malloc(sizeof(char));
 		  tmp[0] = '|';
-		  stream = add_and_advance(stream, tmp, 1, PIPE_COMMAND);
+		  stream = add_and_advance(stream, tmp, 1, PIPE_COMMAND, lineNumber);
 		  state = SPACE;
 		  buffer_size = 0;
 		  buffer = append(buffer, &buffer_size, c);
@@ -328,16 +308,13 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		}
 		else if(state != SPACE)
 		{
-		  fprintf(stderr, "%d: Dangling Operator\n", lineNumber);
-		  //error (1, 0, "Dangling Operator");
+		  error (1, 0, "%d: Dangling Operator\n", lineNumber);
 		}
 		else 
 		{
 		  if ( !((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == '!' || c == '%' || c == '+'
-				|| c == '-' || c == '.' || c == '/' || c == ':' || c == '@' || c == '^' || c== '_'))
-		  {
-			 fprintf(stderr, "%d: Command beginning with containing letter\n", lineNumber);
-		    //error (1, 0, "Command beginning with non letter");
+				|| c == '-' || c == '.' || c == '/' || c == ':' || c == '@' || c == '^' || c== '_')){
+		    error (1, 0, "%d: Command with invalid letter\n", lineNumber);
 		  }
 		  buffer = append(buffer, &buffer_size, c);
 		  state = CHAR;
@@ -348,12 +325,11 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
   //error (1, 0, "command reading not yet implemented");
   if(paren_count != 0)
   {
-    fprintf(stderr, "%d: Open paren not matched\n", lineNumber);
-    //error (1, 0, "Open paren not matched");
+    error (1, 0, "%d: Open paren not matched\n", lineNumber);
   }
   if (buffer_size != 0)
   {
-    add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND);
+    add_and_advance(stream, buffer, buffer_size, SIMPLE_COMMAND, lineNumber);
   }
   stream-> next = NULL;
   print_stream(stream_head);
@@ -412,16 +388,15 @@ void fix_precidence(stack_t expr_stack, stack_t op_stack)
 
 command_t read_command_stream (command_stream_t stream)
 {
-  int prev_is_simple = 0, buffer_size = 0;
+  int prev_is_simple = 0, buffer_size = 0, lineNumber;
   stack_t expr_stack = new_stack(), op_stack = new_stack();
   char * null = NULL;
   command_stream_t s = stream-> next, prev_s;
   command_t command  = NULL;
   char ** buffer;
-  if (s == NULL)
-	return NULL;
   while (s != NULL)
   {
+   lineNumber = s->lineNumber;
    switch(s ->type)
    {
     case AND_COMMAND:
@@ -487,24 +462,22 @@ command_t read_command_stream (command_stream_t stream)
 	default:
 	  if ( prev_is_simple )
 	  {
-	    error (1, 0, "command reading not yet implemented");
+	    error (1, 0, "%d: Consequtive Simple Commands.", s-> lineNumber);
 	  }
 	  command = checked_malloc(sizeof(struct command));
 	  command -> type = SIMPLE_COMMAND;
 	  push(expr_stack, command); 
-	  while( s && s-> word[0] == '\n')
-		s = s-> next;
 	  while( s && s-> type == SIMPLE_COMMAND)
 	  {
 	    if ( (s-> word[0] == '<' || s-> word[0] == '>') && s-> next == NULL)
 		{
-          error (1, 0, "Redirection error");
+          error (1, 0, "%d: Redirection error", s-> lineNumber);
 		}
 	    if (s-> word[0] == '<' && s-> next-> type == SIMPLE_COMMAND)
 		{
 		  if (buffer_size == 0  || s-> next -> word[0] == '>' || s-> next-> word[0] == '<' || s->next == NULL)
 		  {
-		    error (1, 0, "Redirection error");
+		    error (1, 0, "%d: Redirection error", s-> lineNumber);
 		  }
 		  command-> input = s-> next-> word;
 		  prev_s = s -> next;
@@ -515,22 +488,17 @@ command_t read_command_stream (command_stream_t stream)
 		{
 		  if (buffer_size == 0  || s-> next -> word[0] == '>' || s-> next-> word[0] == '<' || s->next == NULL)
 		  {
-		    error (1, 0, "Redirection error");
+		    error (1, 0, "%d: Redirection error", s-> lineNumber);
 		  }
 		  command-> output = s-> next-> word;
 		  prev_s = s -> next;
 	      s = s-> next -> next;
 		  continue;
 		}
-		while (s && s-> word[0] == '\n')
+		if (s-> word[0] == '\n')
 		{
 		  s = s-> next;
-		  prev_is_simple = -1;
-		}
-		if (prev_is_simple == -1){
-			buffer = append2(buffer, &buffer_size, null);
-			command->u.word = buffer;
-			goto end;
+		  goto end;
 		}
 	    buffer = append2(buffer, &buffer_size, s->word);
 		
@@ -546,7 +514,7 @@ command_t read_command_stream (command_stream_t stream)
 	s = s-> next;
   }
   end:
-  if (buffer_size > 0 )
+  if (buffer_size != 0)
   {
 	buffer = append2(buffer, &buffer_size, null);
 	command->u.word = buffer;
@@ -556,7 +524,7 @@ command_t read_command_stream (command_stream_t stream)
   {
     if (expr_stack-> contained < 2)
 	{
-	  error (1, 0, "Invalid syntax");
+	  error (1, 0, "%d: Invalid command syntax", lineNumber);
 	}
     fix_precidence(expr_stack, op_stack);
   }
@@ -570,7 +538,7 @@ command_t read_command_stream (command_stream_t stream)
   }
   else if(expr_stack-> contained != 0)
   {
-    error (1, 0, "command reading not yet implemented");
+    error (1, 0, "%d: Invalid command syntax", lineNumber - 1);
   }
   return NULL;
 }
