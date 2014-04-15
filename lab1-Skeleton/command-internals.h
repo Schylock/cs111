@@ -1,4 +1,6 @@
 // UCLA CS 111 Lab 1 command internals
+#ifndef COMMANDINTERNALS_H
+#define COMMANDINTERNALS_H
 
 enum command_type
   {
@@ -13,7 +15,7 @@ enum command_type
 // Data associated with a command.
 
 
-struct command
+typedef struct command
 {
   enum command_type type;
 
@@ -35,4 +37,12 @@ struct command
     // for SUBSHELL_COMMAND:
     struct command *subshell_command;
   } u;
-};
+}command;
+
+typedef struct commandNode
+{
+  command* m_command;
+  struct commandNode* m_next;
+} commandNode;
+
+#endif

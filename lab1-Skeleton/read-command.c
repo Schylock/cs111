@@ -1,13 +1,11 @@
 // UCLA CS 111 Lab 1 command reading
 
 #include "command.h"
-#include "command-internals.h"
-#include "alloc.h"
-#include <string.h>
+#include "command_stream.h"
+#include "stack_struct.h"
 #include <error.h>
 #include <stdlib.h>
 #include <stdio.h>
-
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
@@ -22,79 +20,6 @@ enum state_enum
   CHAR,
   SPACE,
 };
-  
-struct command_stream
-{
-	struct command_stream * next;
-	char* word;
-	int word_size;
-	enum command_type type;
-	int lineNumber;
-};
-
-struct stack_struct
-{
-  int contained;
-  int items_size;
-  command_t * items;
-};
-
-typedef struct stack_struct * stack_t;
- 
-char * append(char* arr, int* size, char arg)
-{
-  char * res;
-  if (*size == 0){
-	res = (char*)checked_malloc((*size));
-	res[0] = arg;
-	(*size)++;
-	return (char*)res;
-  }
-  res = (char*)checked_realloc(arr, (*size) + 1);
-  res[(*size)] = arg;
-  (*size)++;
-  return (char*)res;
-}
-
-char** append2(char** arr, int* size, char* arg)
-{
-  char ** res;
-  if (*size == 0){
-    res = (char**)checked_malloc( sizeof(char*) );
-  }
-  else{
-    res = (char**)checked_realloc(arr, ((*size)+ 1) * sizeof(char*));
-  }
-  res[(*size)] = arg;
-  (*size)++;
-  return res;
-} 
-
-void print_stream(command_stream_t stream)
-{
-  stream = stream -> next;
-  while( stream != NULL){
-    //printf("Token: %s, Size: %d, Type: %d\n", stream-> word, stream-> word_size, 
-		//stream -> type);
-    if (stream-> next == NULL || stream->next->word_size == 0){
-	  stream-> next = NULL;
-	}
-	stream = stream-> next;
-  }
-
-}
- 
-command_stream_t add_and_advance(command_stream_t stream, char* buffer, int size, enum command_type type, int lineNumber)
-{
-  buffer = append(buffer, &size, '\0');
-  size--;
-  stream-> word = buffer;
-  stream-> word_size = size;
-  stream-> type = type;
-  stream-> next = checked_malloc(sizeof(struct command_stream));
-  stream-> lineNumber = lineNumber;
-  return stream->next;
- }
  
    
 command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_next_byte_argument)
@@ -112,9 +37,11 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
   command_stream_t stream_head = checked_malloc(sizeof(struct command_stream));
   stream_head -> next = checked_malloc(sizeof(struct command_stream));
   command_stream_t stream = stream_head-> next;
-  while ( (c = get_next_byte(get_next_byte_argument)) != EOF){
+  while ( (c = get_next_byte(get_next_byte_argument)) != EOF)
+  {
     //printf("%d\n", state);
-	if (paren_count < 0){
+	if (paren_count < 0)
+	{
 	  error (1, 0, "%d: Too many closing parens\n", lineNumber);
 	}
     switch(c){
@@ -313,7 +240,8 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 		else 
 		{
 		  if ( !((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == '!' || c == '%' || c == '+'
-				|| c == '-' || c == '.' || c == '/' || c == ':' || c == '@' || c == '^' || c== '_')){
+				|| c == '-' || c == '.' || c == '/' || c == ':' || c == '@' || c == '^' || c== '_'))
+		  {
 		    error (1, 0, "%d: Command with invalid letter\n", lineNumber);
 		  }
 		  buffer = append(buffer, &buffer_size, c);
@@ -334,56 +262,6 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
   stream-> next = NULL;
   print_stream(stream_head);
   return stream_head;
-}
-
-stack_t new_stack()
-{
-  stack_t res = checked_malloc(sizeof(struct stack_struct));
-  res-> items = checked_malloc(sizeof(command_t)*64);
-  res-> items_size = 64;
-  res-> contained = 0;
-  return res;
-}
-
-void push(stack_t stack, command_t arg)
-{
-  if( stack-> contained == stack -> items_size)
-  {
-	stack-> items = checked_realloc(stack, sizeof(struct stack_struct)*stack->items_size * 2);
-	stack-> items_size *= 2;
-  }
-  stack-> items[stack->contained] = arg;
-  stack-> contained++;
-}
-
-command_t pop(stack_t stack)
-{
-  stack-> contained--;
-  return stack-> items[stack->contained];
-}
-
-command_t top(stack_t stack)
-{
-  return stack-> items[stack->contained - 1];
-}
-
- void print(char** arr, int size)
- {
-  int c = 0;
-  while (c < size)
-  {
-    printf("%s\n", arr[c]);
-    c++;
-  }
-  
-} 
-
-void fix_precidence(stack_t expr_stack, stack_t op_stack)
-{
-  command_t command = pop(op_stack);
-  command -> u.command[1] = pop(expr_stack);
-  command -> u.command[0] = pop(expr_stack);
-  push(expr_stack, command);
 }
 
 command_t read_command_stream (command_stream_t stream)

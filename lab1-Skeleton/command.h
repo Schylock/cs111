@@ -1,4 +1,6 @@
 // UCLA CS 111 Lab 1 command interface
+#ifndef COMMAND_H
+#define COMMAND_H
 
 typedef struct command *command_t;
 typedef struct command_stream *command_stream_t;
@@ -23,3 +25,5 @@ void execute_command (command_t, int);
 /* Return the exit status of a command, which must have previously been executed.
    Wait for the command, if it is not already finished.  */
 int command_status (command_t);
+
+#endif
