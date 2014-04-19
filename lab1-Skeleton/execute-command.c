@@ -4,11 +4,11 @@
 #include "command-internals.h"
 #include <stdlib.h>
 #include <error.h>
-#include <string.h>
 #include <unistd.h>
-#include<stdio.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+#include <stdio.h>
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
@@ -20,6 +20,7 @@ int command_status (command_t c)
 void runSimpleCommand(command_t c)
 {
 	pid_t pid=fork();
+	if(pid < 0) error(1, 0, "A fork has failed us");
 	if(pid==0)
 	{
 		int inputFD;//if input, change to input else change to stdin
@@ -34,12 +35,12 @@ void runSimpleCommand(command_t c)
 		if(c->output)
 		{
 			outputFD=open(c->output,O_RDWR);
-			printf("After opening %d\n",outputFD);
 			close(1);
 			dup(outputFD);
 			close(outputFD);
 		}
 		c->status=execvp(c->u.word[0],c->u.word);
+		c->status = (c->status & 0xff00) >> 8;
 	}
 	else
 	while(pid!=wait(&(c->status)))
@@ -50,19 +51,22 @@ void runSimpleCommand(command_t c)
 
 void runPipeCommand(command_t c)
 {
-	int fd[2];
+	int fd[2], status;
 	pid_t pid[2];
 	pipe(fd);
 	pid[0]=fork();
+	if(pid[0] < 0) error(1, 0, "A fork has failed us");
 	if(pid[0]==0)
 	{
 		pid[1]=fork();
+		if(pid[1] < 0) error(1, 0, "A fork has failed us");
 		if(pid[1]==0)
 		{
 			close(fd[1]);
 			dup2(fd[0],0);
 			close(fd[0]);
-			c->status=execute_command(c->u.command[1],0);
+			status=execute_command(c->u.command[1],0);
+			status = (status & 0xff00) >> 8;
 			exit(c->status);
 		}
 		else
@@ -70,8 +74,9 @@ void runPipeCommand(command_t c)
 			close(fd[0]);
 			dup2(fd[1],1);
 			close(fd[1]);
-			execute_command(c->u.command[0],0);
-			exit(0);
+			status = execute_command(c->u.command[0],0);
+			status = (status & 0xff00) >> 8;
+			exit(c->status);
 		}
 	}
 	else
@@ -110,6 +115,6 @@ int execute_command (command_t c, int time_travel)
 		abort ();
 	}
 
-	
+	//printf("Return status is %d\n", c->status);
 	return c->status;
 }
