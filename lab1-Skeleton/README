@@ -14,14 +14,16 @@ Group, Discussion, and ID Numbers
  the entire tree is consumed. For each command, this function checks the type of
  that command and takes the appropriate action. For ands, ors, and sequences this 
  is relatively simple; execute the left command branch first and then sometimes
- executing the right, based on what status the left returns. Subshells are even 
- simpler, all thats neccessary is a recursive call to execute_commands. Simples 
- and pipes are handled based on all the advice given during lectures and sections,
- through a combination of the library functions fork, dup, execvp, pipe, wait, 
- and etc. We created two auxiliary functions, one to handle simples and the other
- to handle the pipes. All in all, this part was alot more straight forward and 
- simpler than part A. However, despite our successes, it still may be the case
- that for certain strange inputs, the program will perform undefined behavior.
+ executing the right, based on what status the left returns. We decided to change
+ this function's return type to int simple because it made our implementation 
+ slightly less verbose. Subshells are even simpler, all thats neccessary is a 
+ recursive call to execute_commands. Simples and pipes are handled based on all 
+ the advice given during lectures and sections, through a combination of the 
+ library functions fork, dup, execvp, pipe, wait, and etc. We created two 
+ auxiliary functions, one to handle simples and the other to handle the pipes. 
+ All in all, this part was alot more straight forward and simpler than part A. 
+ However, despite our successes, it still may be the case that for certain strange 
+ inputs, the program will perform undefined behavior.
  
 ////////////////////////////////////////////////////////////////////////////////
 // Lab 1, Part A
