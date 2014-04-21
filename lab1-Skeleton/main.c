@@ -54,6 +54,7 @@ main (int argc, char **argv)
 
   command_t last_command = NULL;
   command_t command;
+  
   while ((command = read_command_stream (command_stream)))
     {
       if (print_tree)
@@ -67,6 +68,8 @@ main (int argc, char **argv)
 	  execute_command (command, time_travel);
 	}
     }
-
+  if (time_travel)
+	execute_command(NULL, time_travel);
+	
   return print_tree || !last_command ? 0 : command_status (last_command);
 }

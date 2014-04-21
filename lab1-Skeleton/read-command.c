@@ -267,7 +267,7 @@ command_stream_t make_command_stream (int (*get_next_byte) (void *), void *get_n
 command_t read_command_stream (command_stream_t stream)
 {
   int prev_is_simple = 0, buffer_size = 0, lineNumber;
-  stack_t expr_stack = new_stack(), op_stack = new_stack();
+  stack_type expr_stack = new_stack(), op_stack = new_stack();
   char * null = NULL;
   command_stream_t s = stream-> next, prev_s;
   command_t command  = NULL;
