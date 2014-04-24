@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <stdio.h>
 #include <string.h>
+#include "precedence.h"
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
@@ -90,7 +91,8 @@ void runPipeCommand(command_t c)
 	waitpid(pid[0],&(c->status),0);
 }
 
-int exec_seq(command_t c){
+int exec_seq(command_t c)
+{
 	pid_t pid;
 	switch (c->type)
     {
@@ -127,29 +129,14 @@ int exec_seq(command_t c){
 
 }
 
-struct precidence{
-	int executed;  //flag: if command executed already   0:not run 1:run not returned, 2:returned
-	int num_deps;  //number of dependencies, can executee if 0
-	command_t command;  //this command, for convenience
-	stack_type dependees;   //this stores precidence_t's not command_t, since theyre the same size(pointer) its not an issue
-							//points to all precidence objs that depend on the current precidence obj
-							
-	//the following four were used only in getting the dependencies set up
-	//you dont have to worry about them unless u really want to 
-	int in_size;   //sizeof inputs
-	int out_size;  //sizeof outputs
-	char** inputs;   //all inputs to this command
-	char** outputs;   //all outputs to this command
-};
 
-typedef struct precidence* precidence_t;
-
-
-void print_stuff(precidence_t* prec){
+void print_stuff(precedence_t* prec)
+{
 	int i, j;
 	char ** w;
 	printf("\nprec fields:\n");
-	for (i = 0; i < commands->contained; i++){
+	for (i = 0; i < commands->contained; i++)
+	{
 		printf("inputs: \n");
 		for (j = 0; j < prec[i]->in_size; j++)
 			printf("%s\n", prec[i]->inputs[j]);
@@ -163,15 +150,16 @@ void print_stuff(precidence_t* prec){
 //should eventually execute all the commands in parellel
 //right now it just prints stuff for a sanity check
 
-int exec_parellel(precidence_t* prec){
+int exec_parellel(precedence_t* prec)
+{
 	print_stuff(prec);
-	
-
 	return commands->items[commands->contained - 1]->status;
 }
 
-void get_redirs(precidence_t prec, int* in_size, int* out_size, command_t c){
-	switch (c->type){
+void get_redirs(precedence_t prec, int* in_size, int* out_size, command_t c)
+{
+	switch (c->type)
+	{
 		case AND_COMMAND:
 		case OR_COMMAND:
 		case PIPE_COMMAND:
@@ -197,18 +185,20 @@ void get_redirs(precidence_t prec, int* in_size, int* out_size, command_t c){
 
 }
 
-precidence_t*  establish_precidence(){
+precedence_t*  establish_precedence()
+{
 //setups
 	int i, j;
 	int * in_size = checked_malloc(sizeof(int));
 	int * out_size = checked_malloc(sizeof(int));
 	char * null = NULL;
-	precidence_t*  prec = checked_malloc(sizeof(precidence_t)* commands->contained);
+	precedence_t*  prec = checked_malloc(sizeof(precedence_t)* commands->contained);
 //getting all the inputs and output strings	
-	for(i = 0; i < commands->contained; i++){
+	for(i = 0; i < commands->contained; i++)
+	{
 		*in_size = 0;
 		*out_size = 0;
-		prec[i] = checked_malloc(sizeof(struct precidence));
+		prec[i] = checked_malloc(sizeof(struct precedence));
 		get_redirs(prec[i], in_size, out_size, commands->items[i]);
 		prec[i]->in_size = *in_size;
 		prec[i]->out_size = *out_size;
@@ -224,46 +214,16 @@ precidence_t*  establish_precidence(){
 	its ooutput is the output of earlier process
 	its input is output of earlier process */
 	printf("List of all matched dependencies:\n");
-	for(i = 0; i < commands->contained - 1; i++){
-		for( *in_size = 0; *in_size < prec[i]->in_size; (*in_size)++){
-			for(j = i + 1; j < commands->contained; j++){
-				for (*out_size = 0; *out_size < prec[j]->out_size; (*out_size)++){
-					if (strcmp(prec[i]->inputs[*in_size], prec[j]->outputs[*out_size]) == 0){
-						printf("%s, %s\n", prec[i]->inputs[*in_size], prec[j]->outputs[*out_size]);
-						//push(prec[j]->dependencies, commands->items[i]);
-						//push(prec[i]->dependees, commands->items[j]);
-						push(prec[i]->dependees, (command_t) prec[j]);
-						prec[j]->num_deps++;
-						break;
-					}
-				}
-			}
+	for(i = 0; i < commands->contained - 1; i++)
+	{
+		for( *in_size = 0; *in_size < prec[i]->in_size; (*in_size)++)
+		{
+			printOutputPrecedence(&j,&i,commands,prec,null,in_size,out_size );
 		}
-		for( *out_size = 0; *out_size < prec[i]->out_size; (*out_size)++){
-			for(j = i + 1; j < commands->contained; j++){
-				for (*in_size = 0; *in_size < prec[j]->in_size; (*in_size)++){
-					if (strcmp(prec[i]->outputs[*out_size], prec[j]->inputs[*in_size]) == 0){
-						printf("%s, %s\n", prec[i]->outputs[*out_size], prec[j]->inputs[*in_size]);
-						//push(prec[j]->dependencies, commands->items[i]);
-						//push(prec[i]->dependees, commands->items[j]);
-						push(prec[i]->dependees, (command_t) prec[j]);
-						prec[j]->num_deps++;
-						break;
-					}
-				}
-			}
-			for(j = i + 1; j < commands->contained; j++){
-				for (*in_size = 0; *in_size < prec[j]->out_size; (*in_size)++){
-					if (strcmp(prec[i]->outputs[*out_size], prec[j]->outputs[*in_size]) == 0){
-						printf("%s, %s\n", prec[i]->outputs[*out_size], prec[j]->outputs[*in_size]);
-						//push(prec[j]->dependencies, commands->items[i]);
-						//push(prec[i]->dependees, commands->items[j]);
-						push(prec[i]->dependees, (command_t) prec[j]);
-						prec[j]->num_deps++;
-						break;
-					}
-				}
-			}
+		for( *out_size = 0; *out_size < prec[i]->out_size; (*out_size)++)
+		{
+			printInputPrecedence(&j,&i,commands,prec,null,in_size,out_size );
+			printInputPrecedence(&j,&i,commands,prec,null,in_size,out_size );
 		}
 		
 	}
@@ -278,8 +238,9 @@ int execute_command (command_t c, int time_travel)
 	else {
 		if (commands == NULL)
 			commands = new_stack();
-		if (c == NULL){
-			precidence_t*  prec = establish_precidence();
+		if (c == NULL)
+		{
+			precedence_t*  prec = establish_precedence();
 			return exec_parellel(prec);
 		}
 		push(commands, c);

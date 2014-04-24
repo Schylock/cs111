@@ -17,21 +17,23 @@ TIMETRASH_SOURCES = \
   read-command.c \
   print-command.c \
   command_stream.c \
-  stack_struct.c 
+  stack_struct.c 	\
+  precedence.c
 TIMETRASH_OBJECTS = $(subst .c,.o,$(TIMETRASH_SOURCES))
 
 DIST_SOURCES = \
-  $(TIMETRASH_SOURCES) alloc.h command.h command-internals.h command_stream.h stack_struct.h Makefile \
+  $(TIMETRASH_SOURCES) alloc.h command.h command-internals.h command_stream.h stack_struct.h precedence.h Makefile \
   $(TESTS) check-dist README
 
 timetrash: $(TIMETRASH_OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $(TIMETRASH_OBJECTS)
 
 alloc.o: alloc.h
-stack_struct.o command_stream.o execute-command.o main.o print-command.o read-command.o: command.h
-stack_struct.o command_stream.o execute-command.o print-command.o read-command.o: command-internals.h
+precedence.o stack_struct.o command_stream.o execute-command.o main.o print-command.o read-command.o: command.h
+precedence.o stack_struct.o command_stream.o execute-command.o print-command.o read-command.o: command-internals.h
 command_stream.o:command_stream.h
 stack_struct.o:stack_struct.h
+precedence.o:precedence.h
 
 dist: $(DISTDIR).tar.gz
 
