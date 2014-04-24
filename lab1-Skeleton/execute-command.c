@@ -127,25 +127,25 @@ int exec_seq(command_t c){
 
 }
 
-
-
 struct precidence{
-	int executed;  //flag: if command executed already
+	int executed;  //flag: if command executed already   0:not run 1:run not returned, 2:returned
+	int num_deps;  //number of dependencies, can executee if 0
+	command_t command;  //this command, for convenience
+	stack_type dependees;   //this stores precidence_t's not command_t, since theyre the same size(pointer) its not an issue
+							//points to all precidence objs that depend on the current precidence obj
+							
+	//the following four were used only in getting the dependencies set up
+	//you dont have to worry about them unless u really want to 
 	int in_size;   //sizeof inputs
 	int out_size;  //sizeof outputs
 	char** inputs;   //all inputs to this command
 	char** outputs;   //all outputs to this command
-	command_t command;  //this command, for convenience
-	stack_type dependencies;   //all commands that this command depends upon, kept as stack
-	
 };
 
 typedef struct precidence* precidence_t;
 
-//should eventually execute all the commands in parellel
-//right now it just prints stuff for a sanity check
-//i've added a remove_elem function for stack which u may find useful
-int exec_parellel(precidence_t* prec){
+
+void print_stuff(precidence_t* prec){
 	int i, j;
 	char ** w;
 	printf("\nprec fields:\n");
@@ -156,10 +156,18 @@ int exec_parellel(precidence_t* prec){
 		printf("outputs: \n");
 		for (j = 0; j < prec[i]->out_size; j++)
 			printf("%s\n", prec[i]->outputs[j]);
-		printf("%d dependencies\n", prec[i]->dependencies->contained);
+		printf("%d dependees\n", prec[i]->dependees->contained);
 	}
+}
 
-	return commands->items[i - 1]->status;
+//should eventually execute all the commands in parellel
+//right now it just prints stuff for a sanity check
+
+int exec_parellel(precidence_t* prec){
+	print_stuff(prec);
+	
+
+	return commands->items[commands->contained - 1]->status;
 }
 
 void get_redirs(precidence_t prec, int* in_size, int* out_size, command_t c){
@@ -204,11 +212,12 @@ precidence_t*  establish_precidence(){
 		get_redirs(prec[i], in_size, out_size, commands->items[i]);
 		prec[i]->in_size = *in_size;
 		prec[i]->out_size = *out_size;
+		prec[i]->num_deps = 0;
 		prec[i]->inputs = append2(prec[i]->inputs, in_size, null);
 		prec[i]->outputs = append2(prec[i]->outputs, out_size, null);
 		prec[i]->command = commands->items[i];
 		prec[i]->executed = 0;	
-		prec[i]->dependencies = new_stack();
+		prec[i]->dependees = new_stack();
 	}
 /* a later process depends on an earlier process if: 
 	its output is the input of earlier process
@@ -221,7 +230,10 @@ precidence_t*  establish_precidence(){
 				for (*out_size = 0; *out_size < prec[j]->out_size; (*out_size)++){
 					if (strcmp(prec[i]->inputs[*in_size], prec[j]->outputs[*out_size]) == 0){
 						printf("%s, %s\n", prec[i]->inputs[*in_size], prec[j]->outputs[*out_size]);
-						push(prec[j]->dependencies, commands->items[i]);
+						//push(prec[j]->dependencies, commands->items[i]);
+						//push(prec[i]->dependees, commands->items[j]);
+						push(prec[i]->dependees, (command_t) prec[j]);
+						prec[j]->num_deps++;
 						break;
 					}
 				}
@@ -232,7 +244,10 @@ precidence_t*  establish_precidence(){
 				for (*in_size = 0; *in_size < prec[j]->in_size; (*in_size)++){
 					if (strcmp(prec[i]->outputs[*out_size], prec[j]->inputs[*in_size]) == 0){
 						printf("%s, %s\n", prec[i]->outputs[*out_size], prec[j]->inputs[*in_size]);
-						push(prec[j]->dependencies, commands->items[i]);
+						//push(prec[j]->dependencies, commands->items[i]);
+						//push(prec[i]->dependees, commands->items[j]);
+						push(prec[i]->dependees, (command_t) prec[j]);
+						prec[j]->num_deps++;
 						break;
 					}
 				}
@@ -241,7 +256,10 @@ precidence_t*  establish_precidence(){
 				for (*in_size = 0; *in_size < prec[j]->out_size; (*in_size)++){
 					if (strcmp(prec[i]->outputs[*out_size], prec[j]->outputs[*in_size]) == 0){
 						printf("%s, %s\n", prec[i]->outputs[*out_size], prec[j]->outputs[*in_size]);
-						push(prec[j]->dependencies, commands->items[i]);
+						//push(prec[j]->dependencies, commands->items[i]);
+						//push(prec[i]->dependees, commands->items[j]);
+						push(prec[i]->dependees, (command_t) prec[j]);
+						prec[j]->num_deps++;
 						break;
 					}
 				}
