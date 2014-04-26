@@ -1,7 +1,7 @@
 #ifndef PRECEDENCE_H
 #define PRECEDENCE_H
+
 #include "stack_struct.h"
-#include "command-internals.h"
 
 typedef struct precedence
 {
@@ -16,6 +16,7 @@ typedef struct precedence
 	int out_size;  //sizeof outputs
 	char** inputs;   //all inputs to this command
 	char** outputs;   //all outputs to this command
+	int pid;
 }precedence;
 
 typedef precedence* precedence_t;

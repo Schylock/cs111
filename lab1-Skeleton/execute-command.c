@@ -153,6 +153,47 @@ void print_stuff(precedence_t* prec)
 int exec_parellel(precedence_t* prec)
 {
 	print_stuff(prec);
+	int i=0;
+	int inner=0;
+	int pid;
+	int numdep;
+	precedence_t ptr;
+	while(i<commands->contained)
+	{
+		for(inner=0;inner<commands->contained;i++)
+		{
+			if(prec[inner]->num_deps>0)
+				continue;
+			if(prec[inner]->executed==0)
+			{
+				pid=fork();
+				if(pid<0)
+					error(1,0,"%d is not a valid thread number",pid);
+				if(pid==0)
+				{
+				}
+				else
+				{
+					prec[inner]->pid=pid;
+				}	
+				exec_seq(prec[inner]->command);
+				i++;
+			}
+			
+		}
+		pid=wait(&(prec[inner]->command->status));
+		for(inner=0;inner<commands->contained;inner++)
+		{
+			if(prec[inner]->pid==pid)
+			{
+				for(numdep=0;numdep<prec[inner]->dependees->contained;numdep++)
+				{
+					ptr=(precedence_t)(prec[inner]->dependees->items[numdep]);
+					(ptr->num_deps)--;
+				}
+			}
+		}
+	}
 	return commands->items[commands->contained - 1]->status;
 }
 
@@ -198,7 +239,7 @@ precedence_t*  establish_precedence()
 	{
 		*in_size = 0;
 		*out_size = 0;
-		prec[i] = checked_malloc(sizeof(struct precedence));
+		prec[i] = checked_malloc(sizeof(precedence));
 		get_redirs(prec[i], in_size, out_size, commands->items[i]);
 		prec[i]->in_size = *in_size;
 		prec[i]->out_size = *out_size;

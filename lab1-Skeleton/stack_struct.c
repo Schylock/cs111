@@ -2,10 +2,13 @@
 #include "command.h"
 
 
-void remove_elem(stack_type s, command* c){
+void remove_elem(stack_type s, command* c)
+{
 	int i = 0;
-	for (i; i < s->contained; i++){
-		if (s-> items[i] == c){
+	for (i; i < s->contained; i++)
+	{
+		if (s-> items[i] == c)
+		{
 			s->contained--;
 			s->items[i] = s->items[s->contained];
 			return;
