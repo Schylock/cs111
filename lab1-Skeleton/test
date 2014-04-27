@@ -1,6 +1,11 @@
+
 ls -l> out && echo ranls
 echo islam
-
 echo oppai
-sort -u <out >out| cat 
-cat out
+sort -u <out >out
+tr a-z A-Z <out >out
+cat <README | tr a-z A-Z | sort -u > out || echo sort failed!
+echo yo
+echo ho
+echo gold
+echo out

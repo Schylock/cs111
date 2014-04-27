@@ -14,7 +14,7 @@ void printInputPrecedence(int* j, int* i, stack_type commands,precedence_t* prec
 		{
 			if (strcmp(prec[(*i)]->outputs[*out_size], prec[(*j)]->inputs[*in_size]) == 0)
 			{
-				printf("%s, %s\n", prec[(*i)]->outputs[*out_size], prec[(*j)]->inputs[*in_size]);
+				//printf("%s, %s\n", prec[(*i)]->outputs[*out_size], prec[(*j)]->inputs[*in_size]);
 				//push(prec[j]->dependencies, commands->items[i]);
 				//push(prec[i]->dependees, commands->items[j]);
 				push(prec[(*i)]->dependees, (command_t) prec[(*j)]);
@@ -33,7 +33,7 @@ void printOutputPrecedence(int* j, int* i, stack_type commands,precedence_t* pre
 		{
 			if (strcmp(prec[(*i)]->inputs[*in_size], prec[(*j)]->outputs[*out_size]) == 0)
 			{
-				printf("%s, %s\n", prec[(*i)]->inputs[*in_size], prec[(*j)]->outputs[*out_size]);
+				//printf("%s, %s\n", prec[(*i)]->inputs[*in_size], prec[(*j)]->outputs[*out_size]);
 				//push(prec[j]->dependencies, commands->items[i]);
 				//push(prec[i]->dependees, commands->items[j]);
 				push(prec[(*i)]->dependees, (command_t) prec[(*j)]);

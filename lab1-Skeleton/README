@@ -2,7 +2,20 @@ Group, Discussion, and ID Numbers
  - Mingyu Lu	1B 904 035 039
  - Arjun Patel	1B 504 027 395
 
+ ////////////////////////////////////////////////////////////////////////////////
+// Lab 1, Part C
+////////////////////////////////////////////////////////////////////////////////
 
+parellelizing:
+
+We more or less adhered to the methods presented in discussion with respect to 
+implementing this part of the lab. The commands are sequentially read in, 
+depedencies between the commands are parsed. The commands without any dependencies
+are then executed; when finished, the dependees of those commands are updated
+accordingly i.e. removing that particular dependency. We only parellized top 
+level commands, so each command tree is still executed sequentially. There may be
+some limitations to our code regarding parsing sequence commands and newlines, but
+other than that, it should work as expected.
  
 ////////////////////////////////////////////////////////////////////////////////
 // Lab 1, Part B

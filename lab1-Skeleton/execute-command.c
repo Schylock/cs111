@@ -152,36 +152,39 @@ void print_stuff(precedence_t* prec)
 
 int exec_parellel(precedence_t* prec)
 {
-	print_stuff(prec);
+	//print_stuff(prec);
 	int i=0;
 	int inner=0;
 	int pid;
 	int numdep;
+	int status;
 	precedence_t ptr;
 	while(i<commands->contained)
 	{
-		for(inner=0;inner<commands->contained;i++)
+		for(inner=0;inner<commands->contained;inner++)
 		{
 			if(prec[inner]->num_deps>0)
 				continue;
 			if(prec[inner]->executed==0)
 			{
 				pid=fork();
-				if(pid<0)
-					error(1,0,"%d is not a valid thread number",pid);
 				if(pid==0)
 				{
+					exit(exec_seq(prec[inner]->command));
 				}
+				else if(pid<0)
+					error(1,0,"%d is not a valid thread number",pid);
 				else
 				{
 					prec[inner]->pid=pid;
+					prec[inner]->executed = 1;
 				}	
-				exec_seq(prec[inner]->command);
-				i++;
+				
 			}
 			
 		}
-		pid=wait(&(prec[inner]->command->status));
+		pid=wait(&status);
+		i++;
 		for(inner=0;inner<commands->contained;inner++)
 		{
 			if(prec[inner]->pid==pid)
@@ -191,6 +194,7 @@ int exec_parellel(precedence_t* prec)
 					ptr=(precedence_t)(prec[inner]->dependees->items[numdep]);
 					(ptr->num_deps)--;
 				}
+				break;
 			}
 		}
 	}
@@ -254,7 +258,7 @@ precedence_t*  establish_precedence()
 	its output is the input of earlier process
 	its ooutput is the output of earlier process
 	its input is output of earlier process */
-	printf("List of all matched dependencies:\n");
+	//printf("List of all matched dependencies:\n");
 	for(i = 0; i < commands->contained - 1; i++)
 	{
 		for( *in_size = 0; *in_size < prec[i]->in_size; (*in_size)++)
