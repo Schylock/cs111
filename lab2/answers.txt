@@ -14,9 +14,9 @@ Student ID: 504027395
 Email: arjunpatel422@gmail.com
 
 # Partner 2
-#Name: Partner's Name Here
-#Student ID: Partner's ID Here
-#Email: Partner's Email Here
+#Name: Mingyu Lu
+#Student ID: 904035039
+#Email: lmy_93@yahoo.com
 
 
 # Add any other information you'd like us to have below this line.
