@@ -47,6 +47,12 @@ static int nsectors = 32;
 module_param(nsectors, int, 0);
 
 
+struct pid_list {
+	pid_t pid;
+	struct pid_list * next;
+
+};
+
 
 /* The internal representation of our device. */
 typedef struct osprd_info
@@ -65,6 +71,8 @@ typedef struct osprd_info
 	int wr_lock; //negative for writing and positive for reading 
 	pid_t writeLockId; //this should be initialized to 0
 	pid_t readLockId; //change value whenever we receive lock check against current pid 
+	struct pid_list* rl_ids;	
+
 	// The following elements are used internally; you don't need
 	// to understand them.
 	struct request_queue *queue;    // The device request queue.
@@ -101,6 +109,33 @@ static osprd_info_t *file2osprd(struct file *filp);
  *   argument.
  */
 static void for_each_open_file(struct task_struct *task, void (*callback)(struct file *filp, osprd_info_t *user_data), osprd_info_t *user_data);
+
+
+void pid_list_add(struct pid_list * list, pid_t pid){
+	while(list->next != NULL)
+		list = list->next;
+	list->next = kmalloc(sizeof(struct pid_list), GFP_ATOMIC);
+	list->next->pid = pid;
+	list->next->next = NULL;
+}
+
+int pid_list_contain(struct pid_list * list, pid_t pid){
+	list = list->next;
+	while(list != NULL){
+		if (list->pid == pid) return 1;
+		list = list->next;	
+	}
+	return 0;
+}
+
+void pid_list_remove(struct pid_list* list, pid_t pid){
+	while(list->next->pid != pid){
+		list = list->next;
+	}
+	struct pid_list* next = list->next;
+	list->next = next->next;
+	kfree(next);
+}
 
 
 /*
@@ -179,7 +214,7 @@ static int osprd_close_last(struct inode *inode, struct file *filp)
 			else 
 			{
 				d->wr_lock--;
-				d->readLockId=-1;
+				pid_list_remove(d->rl_ids, current->pid);
 			}
 			filp->f_flags &= ~F_OSPRD_LOCKED;
 			wake_up_all(&d->blockq);			
@@ -256,71 +291,43 @@ int osprd_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsign
 		unsigned ticket = d->ticket_head;
 		osp_spin_lock(&d->mutex);
 		d->ticket_head++;
-		if(signal_pending(current))
-			return;
 		osp_spin_unlock(&d->mutex);
-		if(signal_pending(current))
-			return;
+
 		if(filp_writable)
 		{	
-			if(signal_pending(current))
-				return;
-			r = wait_event_interruptible(d->blockq, d->wr_lock==0 && d->ticket_tail==ticket);
-			if(signal_pending(current))
-				return;
-			if (r == -ERESTARTSYS)
-			{
-				if(signal_pending(current))
-					return;
-				osp_spin_lock(&d->mutex);
-				if(signal_pending(current))
-					return;
-				goto finish;
-			}
-			if(signal_pending(current))
-				return;
 			if(current->pid==d->writeLockId)
 				return -EDEADLK;
+			r = wait_event_interruptible(d->blockq, d->wr_lock==0 && d->ticket_tail==ticket);
+			if (r == -ERESTARTSYS)
+			{
+				osp_spin_lock(&d->mutex);
+
+				goto finish;
+			}
+
 			osp_spin_lock(&d->mutex);
-			if(signal_pending(current))
-				return;
 			d->wr_lock--;
 			d->writeLockId=current->pid;
 		}
 		else
 		{
-			if(signal_pending(current))
-				return;
+			if (pid_list_contain(d->rl_ids, current->pid))
+				return -EDEADLK;
+
 			r = wait_event_interruptible(d->blockq, d->wr_lock==0 && d->ticket_tail==ticket);
-			if(signal_pending(current))
-				return;
 			if (r == -ERESTARTSYS)
 			{	
-				if(signal_pending(current))
-					return;
 				osp_spin_lock(&d->mutex);
-				if(signal_pending(current))
-					return;
 				goto finish;
 			}
-			if(signal_pending(current))
-				return;
-			if(d->readLockId==current->pid)
-				return -EDEADLK;
 			osp_spin_lock(&d->mutex);
-			if(signal_pending(current))
-				return;
 			d->wr_lock++;
-			d->readLockId=current->pid;
+			pid_list_add(d->rl_ids, current->pid);
 		}
 		filp->f_flags |= F_OSPRD_LOCKED;
 		finish:
 		d->ticket_tail++;
-		if(signal_pending(current))
-			return;
 		osp_spin_unlock(&d->mutex);
-		if(signal_pending(current))
-			return;
 	} 
 	else if (cmd == OSPRDIOCTRYACQUIRE) 
 	{
@@ -341,10 +348,10 @@ int osprd_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsign
 		}
 		else if(filp_writable == 0 && d->wr_lock==0)
 		{
-			if(current->pid==d->readLockId)
+			if (pid_list_contain(d->rl_ids, current->pid))
 				return -EDEADLK;
 			d->wr_lock++;
-			d->readLockId=current->pid;
+			pid_list_add(d->rl_ids, current->pid);
 		}
 		else 
 		{
@@ -365,11 +372,7 @@ int osprd_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsign
 		// you need, and return 0.
 		if(filp->f_flags & F_OSPRD_LOCKED == 0)
 			return -EINVAL;
-		if(signal_pending(current))
-			return;
 		osp_spin_lock(&d->mutex);
-		if(signal_pending(current))
-			return;
 		if(filp_writable)
 		{
 			d->wr_lock++;
@@ -378,15 +381,11 @@ int osprd_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsign
 		else
 		{
 			d->wr_lock--;
-			d->readLockId=-1;
+			pid_list_remove(d->rl_ids, current->pid);
 		}
 		filp->f_flags &= ~F_OSPRD_LOCKED;
 		wake_up_all(&d->blockq);			
-		if(signal_pending(current))
-			return;
 		osp_spin_unlock(&d->mutex);
-		if(signal_pending(current))
-			return;
 	} 
 	else
 		r = -ENOTTY; /* unknown command */
@@ -403,8 +402,10 @@ static void osprd_setup(osprd_info_t *d)
 	osp_spin_lock_init(&d->mutex);
 	d->ticket_head = d->ticket_tail = 0;
 	d->wr_lock = 0;
-	d->readLockId=-1;
+	d->readLockId=-100;
 	d->writeLockId=-1;
+	d->rl_ids = kmalloc(sizeof(struct pid_list), GFP_ATOMIC);
+	d->rl_ids->next = NULL;
 	/* Add code here if you add fields to osprd_info_t. */
 }
 
